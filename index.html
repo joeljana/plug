@@ -1,0 +1,141 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+
+<body>
+    
+    <h1>SMART PLUG STATUS</h1>
+
+    <p>
+        Switch: <span id="switch"></span><br/>
+        Voltage: <span id="voltage"></span><br/>
+        Power: <span id="power"></span><br/>
+        Current: <span id="current"></span>
+    </p>
+
+
+
+    <script>
+
+        //******************* GET ACCESS TOKEN FROM SERVER*********************//   
+
+        let client_id = "38n9ryheksg8ess9k7u3";
+        let user_id = "in1620858464729fYqnU";
+        let device_id = "d74760ee50c76c8307ut4t";
+        let t = Date.now();
+        //let t = "1688849435892";
+
+        let method = "GET";
+        let sign_url = "/v1.0/token?grant_type=1";
+
+        // Couldn't get nodered to process an empty string so this is a hash of an empty file
+        let content_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        let string_to_sign = method + "\n" + content_hash + "\n" + "" + "\n" + sign_url;
+        let signStr = client_id + t + string_to_sign;
+
+        let tData = signStr;
+        let secret = "265e9d2a784e443d9a5a7ab19e1cc0ce";
+
+        let sign = CryptoJS.HmacSHA256(tData, secret).toString();
+
+        //document.write(sign);
+        //console.log(sign);
+        let yourName = "joel";
+        let token_url = 'https://openapi.tuyain.com/v1.0/token?grant_type=1';
+        async function getToken() {
+            const response = await fetch(token_url, {
+                method: "get",
+                headers: {
+                    "sign_method": "HMAC-SHA256",
+                    "client_id": client_id,
+                    "t": t.toString(),
+                    "sign": sign.toUpperCase()
+                    
+                }
+            });
+            const data = await response.json();
+            let access = data.result.access_token;
+            let refresh = data.result.refresh_token;
+            let expire_time = data.result.expire_time;
+            let time = data.t;
+            console.log(data);
+
+            //console.log(time);
+            // console.log(access);
+            // console.log(refresh);
+            // console.log(expire_time);
+
+            localStorage.setItem("token", access);
+            localStorage.setItem("time", time);
+        }
+        getToken();
+
+        //******************* GET DEVICE STATUS FROM SERVER*********************//           
+        function final() {
+            let t = Date.now();
+            let token = localStorage.getItem("token");
+            let time = localStorage.getItem("time");
+
+            var method = "GET";
+            var sign_url = "/v1.0/iot-03/devices/" + device_id + "/status";
+            var content_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+            var string_to_sign = method + "\n" + content_hash + "\n" + "" + "\n" + sign_url;
+            var signStr = client_id + token + t + string_to_sign;
+
+            let apiData = signStr;
+            let secret = "265e9d2a784e443d9a5a7ab19e1cc0ce";
+
+            sign = CryptoJS.HmacSHA256(apiData, secret).toString();
+
+            //document.write(sign);
+
+
+            let status_url = "https://openapi.tuyain.com/v1.0/iot-03/devices/"+device_id+"/status";
+            async function getStatus() {
+                const response = await fetch(status_url, {
+                    method: "get",
+                    headers: {
+                        "sign_method": "HMAC-SHA256",
+                        "client_id": client_id,
+                        "t": t.toString(),
+                        "mode": "cors",
+                        "Content-Type": "application/json",
+                        "sign": sign.toUpperCase(),
+                        "access_token": token
+                    }
+                });
+                const data = await response.json();
+                
+                let switch1 = data.result[0].value;
+                let voltage = data.result[5].value;
+                let power = data.result[4].value;
+                let current = data.result[3].value;
+
+                document.getElementById('switch').textContent = switch1;
+                document.getElementById('voltage').textContent = voltage /10;
+                document.getElementById('power').textContent = power /10;
+                document.getElementById('current').textContent = current /1000;
+
+                console.log(data);
+                //console.log(switch1);
+                //console.log(sign.toUpperCase());
+
+
+            } getStatus();
+        }
+        final();
+
+
+
+        //setInterval(final,5000);
+
+    </script>
+
+</body>
+
+</html>
